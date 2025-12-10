@@ -68,13 +68,54 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
 }
 
 /**
+ * Check if localStorage is available and working
+ */
+export function checkLocalStorageAvailable(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    const testKey = '__localStorage_test__';
+    const testValue = 'test';
+
+    window.localStorage.setItem(testKey, testValue);
+    const retrieved = window.localStorage.getItem(testKey);
+    window.localStorage.removeItem(testKey);
+
+    const isAvailable = retrieved === testValue;
+
+    if (!isAvailable) {
+      console.error('localStorage test failed: Value mismatch');
+      return false;
+    }
+
+    debugLog('localStorage: ✅ Available and working');
+    return true;
+  } catch (error) {
+    console.error('localStorage test failed:', error);
+    return false;
+  }
+}
+
+/**
  * Initialize default admin account
  */
 export async function initializeDefaultAdmin(): Promise<void> {
+  debugLog('initializeDefaultAdmin: Starting...');
+
+  // Check localStorage first
+  if (!checkLocalStorageAvailable()) {
+    console.error('initializeDefaultAdmin: localStorage is not available!');
+    alert('CRITICAL ERROR: Browser localStorage is disabled or unavailable.\n\nThe exam portal requires localStorage to function.\n\nPlease enable cookies/localStorage in your browser settings.');
+    return;
+  }
+
   const users = loadUsers();
+  debugLog(`initializeDefaultAdmin: Found ${users.length} existing users`);
+
   const adminExists = users.some(u => u.username === 'Buildco_admin');
 
   if (!adminExists) {
+    debugLog('initializeDefaultAdmin: Creating default admin account...');
     const admin: User = {
       id: generateId(),
       username: 'Buildco_admin',
@@ -83,7 +124,16 @@ export async function initializeDefaultAdmin(): Promise<void> {
       createdAt: Date.now()
     };
     users.push(admin);
-    saveUsers(users);
+
+    try {
+      saveUsers(users);
+      debugLog('initializeDefaultAdmin: ✅ Admin account created successfully');
+    } catch (error) {
+      console.error('initializeDefaultAdmin: Failed to create admin:', error);
+      alert('CRITICAL ERROR: Could not create admin account.\n\nPlease check browser console and localStorage settings.');
+    }
+  } else {
+    debugLog('initializeDefaultAdmin: Admin account already exists');
   }
 }
 
@@ -117,19 +167,47 @@ function saveUsers(users: User[]): void {
   }
 
   try {
+    // Check if localStorage is available
+    if (!window.localStorage) {
+      console.error('saveUsers: localStorage is not available!');
+      alert('ERROR: Browser localStorage is not available. Cannot save user data.');
+      throw new Error('localStorage not available');
+    }
+
     const dataToSave = JSON.stringify(users);
+    debugLog(`saveUsers: Attempting to save ${users.length} users...`, users.map(u => u.username));
+
     localStorage.setItem(USERS_STORAGE_KEY, dataToSave);
-    debugLog(`saveUsers: Saved ${users.length} users`, users.map(u => u.username));
+    debugLog('saveUsers: localStorage.setItem called successfully');
 
     // Verify the save worked
     const verification = localStorage.getItem(USERS_STORAGE_KEY);
-    if (verification !== dataToSave) {
-      console.error('saveUsers: Verification failed! Data was not saved correctly.');
-    } else {
-      debugLog('saveUsers: Verification successful');
+
+    if (!verification) {
+      console.error('saveUsers: CRITICAL - localStorage.getItem returned null!');
+      alert('CRITICAL: Data was not saved. localStorage may be disabled in browser settings.');
+      throw new Error('localStorage verification failed - returned null');
     }
+
+    if (verification !== dataToSave) {
+      console.error('saveUsers: CRITICAL - Data mismatch after save!');
+      console.error('Expected:', dataToSave.substring(0, 100));
+      console.error('Got:', verification.substring(0, 100));
+      alert('ERROR: Data verification failed after save.');
+      throw new Error('localStorage verification failed - data mismatch');
+    }
+
+    // Parse to verify structure
+    const parsed = JSON.parse(verification);
+    debugLog(`saveUsers: ✅ Verified ${parsed.length} users saved:`, parsed.map((u: User) => u.username));
+
   } catch (error) {
-    console.error('Failed to save users:', error);
+    console.error('saveUsers: EXCEPTION:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    throw error; // Re-throw so registerUser knows it failed
   }
 }
 
@@ -162,18 +240,31 @@ export async function registerUser(username: string, password: string, role: 'us
   users.push(user);
   debugLog(`registerUser: User "${username}" added to array, total users: ${users.length}`);
 
-  saveUsers(users);
+  try {
+    saveUsers(users);
+    debugLog(`registerUser: saveUsers completed without throwing`);
+  } catch (error) {
+    console.error(`registerUser: saveUsers threw an error:`, error);
+    return {
+      success: false,
+      error: `Failed to save user: ${error instanceof Error ? error.message : 'localStorage error'}`
+    };
+  }
 
   // Verify the user was saved
+  debugLog(`registerUser: Verifying user was saved...`);
   const verifyUsers = loadUsers();
+  debugLog(`registerUser: loadUsers returned ${verifyUsers.length} users:`, verifyUsers.map(u => u.username));
+
   const userExists = verifyUsers.some(u => u.username === username);
 
   if (!userExists) {
-    console.error(`registerUser: CRITICAL - User "${username}" was not saved!`);
-    return { success: false, error: 'Failed to save user to storage' };
+    console.error(`registerUser: CRITICAL - User "${username}" was not found after save!`);
+    console.error(`registerUser: Users in storage:`, verifyUsers.map(u => u.username));
+    return { success: false, error: `Failed to persist user "${username}" to storage. Check browser console for details.` };
   }
 
-  debugLog(`registerUser: User "${username}" successfully registered and verified`);
+  debugLog(`registerUser: ✅ User "${username}" successfully registered and verified`);
   return { success: true, user };
 }
 
