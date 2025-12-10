@@ -16,7 +16,7 @@ import {
   getShuffledOptions
 } from '@/lib/examSession';
 import { EXAM_CONFIG } from '@/lib/examConfig';
-import { getCurrentSession, saveExamAttempt } from '@/lib/auth';
+import { getCurrentSession, saveExamAttempt } from '@/lib/authDb';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -141,7 +141,7 @@ export default function ExamInterface({ onExit }: ExamInterfaceProps) {
     if (authSession && submitted.submittedAt) {
       saveExamAttempt({
         userId: authSession.userId,
-        sessionId: submitted.sessionId,
+        username: authSession.username,
         startedAt: submitted.startedAt,
         completedAt: submitted.submittedAt,
         score: results.scoredMarks,

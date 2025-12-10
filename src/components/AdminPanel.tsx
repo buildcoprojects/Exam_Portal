@@ -3,29 +3,19 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Users,
-  UserPlus,
   ArrowLeft,
-  Trash2,
-  Copy,
   CheckCircle2,
-  AlertCircle,
   BarChart3
 } from 'lucide-react';
 import {
   getAllUsers,
   getAllExamAttempts,
-  registerUser,
-  deleteUser,
-  generatePassword,
   type User,
   type ExamAttempt
-} from '@/lib/auth';
+} from '@/lib/authDb';
 
 interface AdminPanelProps {
   onBackToDashboard: () => void;
@@ -34,93 +24,21 @@ interface AdminPanelProps {
 export default function AdminPanel({ onBackToDashboard }: AdminPanelProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
-  const [showCreateUser, setShowCreateUser] = useState(false);
-  const [newUsername, setNewUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [createError, setCreateError] = useState('');
-  const [createSuccess, setCreateSuccess] = useState('');
-  const [copiedPassword, setCopiedPassword] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    setUsers(getAllUsers());
-    setAttempts(getAllExamAttempts());
-  };
-
-  const handleCreateUser = async () => {
-    setCreateError('');
-    setCreateSuccess('');
-
-    if (!newUsername.trim()) {
-      setCreateError('Username is required');
-      return;
-    }
-
-    if (!newPassword.trim()) {
-      setCreateError('Password is required');
-      return;
-    }
-
-    console.log('[AdminPanel] Creating user:', newUsername.trim());
-    const result = await registerUser(newUsername.trim(), newPassword, 'user');
-
-    if (result.success) {
-      console.log('[AdminPanel] User created successfully:', newUsername);
-      setCreateSuccess(`✅ User "${newUsername}" created successfully! They can now login with username "${newUsername}" and the password you set.`);
-      setNewUsername('');
-      setNewPassword('');
-      loadData();
-      setTimeout(() => {
-        setShowCreateUser(false);
-        setCreateSuccess('');
-      }, 3000);
-    } else {
-      console.error('[AdminPanel] Failed to create user:', result.error);
-      setCreateError(result.error || 'Failed to create user');
-    }
-  };
-
-  const handleDeleteUser = (userId: string, username: string) => {
-    if (username === 'Buildco_admin') {
-      alert('Cannot delete the admin account');
-      return;
-    }
-
-    if (confirm(`Are you sure you want to delete user "${username}"?`)) {
-      const success = deleteUser(userId);
-      if (success) {
-        loadData();
-      }
-    }
-  };
-
-  const handleGeneratePassword = () => {
-    const password = generatePassword();
-    setNewPassword(password);
-  };
-
-  const handleCopyPassword = () => {
-    navigator.clipboard.writeText(newPassword);
-    setCopiedPassword(true);
-    setTimeout(() => setCopiedPassword(false), 2000);
-  };
-
-  const createBenAccount = async () => {
-    const password = generatePassword();
-    console.log('[AdminPanel] Creating account for Ben with password:', password);
-    const result = await registerUser('Ben', password, 'user');
-
-    if (result.success) {
-      console.log('[AdminPanel] Ben account created successfully');
-      alert(`✅ Account created for Ben!\n\nUsername: Ben\nPassword: ${password}\n\n⚠️ IMPORTANT: Save this password now!\n\nYou can now logout and login as Ben using these credentials.`);
-      loadData();
-    } else {
-      console.error('[AdminPanel] Failed to create Ben account:', result.error);
-      alert(`❌ Failed to create account: ${result.error}`);
-    }
+  const loadData = async () => {
+    setLoading(true);
+    const [usersData, attemptsData] = await Promise.all([
+      getAllUsers(),
+      getAllExamAttempts()
+    ]);
+    setUsers(usersData);
+    setAttempts(attemptsData);
+    setLoading(false);
   };
 
   // Calculate user stats
@@ -135,13 +53,21 @@ export default function AdminPanel({ onBackToDashboard }: AdminPanelProps) {
     return { totalAttempts, passed, avgScore };
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-AU', {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-AU', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-slate-200 text-xl">Loading admin panel...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-8 px-4">
@@ -156,133 +82,21 @@ export default function AdminPanel({ onBackToDashboard }: AdminPanelProps) {
                   Admin Panel
                 </CardTitle>
                 <CardDescription className="text-slate-400">
-                  User Management & System Overview
+                  System Overview & User Statistics
                 </CardDescription>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={createBenAccount}
-                  variant="outline"
-                  className="border-purple-600 text-purple-400 hover:bg-purple-900/20"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Create Account for Ben
-                </Button>
-                <Button
-                  onClick={() => setShowCreateUser(!showCreateUser)}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Create User
-                </Button>
-                <Button
-                  onClick={onBackToDashboard}
-                  variant="outline"
-                  className="border-slate-600"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </div>
+              <Button
+                onClick={onBackToDashboard}
+                variant="outline"
+                className="border-slate-600"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
+              </Button>
             </div>
           </CardHeader>
         </Card>
-
-        {/* Create User Form */}
-        {showCreateUser && (
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-slate-100">Create New User</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {createError && (
-                <Alert className="border-red-700 bg-red-900/20">
-                  <AlertCircle className="h-4 w-4 text-red-400" />
-                  <AlertDescription className="text-red-200">{createError}</AlertDescription>
-                </Alert>
-              )}
-
-              {createSuccess && (
-                <Alert className="border-emerald-700 bg-emerald-900/20">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <AlertDescription className="text-emerald-200">{createSuccess}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="new-username" className="text-slate-200">
-                    Username
-                  </Label>
-                  <Input
-                    id="new-username"
-                    type="text"
-                    value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value)}
-                    placeholder="Enter username"
-                    className="bg-slate-900/50 border-slate-600 text-slate-100"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="new-password" className="text-slate-200">
-                    Password
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="new-password"
-                      type="text"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter or generate password"
-                      className="bg-slate-900/50 border-slate-600 text-slate-100"
-                    />
-                    <Button
-                      onClick={handleGeneratePassword}
-                      variant="outline"
-                      className="border-slate-600"
-                      type="button"
-                    >
-                      Generate
-                    </Button>
-                    <Button
-                      onClick={handleCopyPassword}
-                      variant="outline"
-                      className="border-slate-600"
-                      type="button"
-                      disabled={!newPassword}
-                    >
-                      {copiedPassword ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleCreateUser}
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                >
-                  Create User
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowCreateUser(false);
-                    setNewUsername('');
-                    setNewPassword('');
-                    setCreateError('');
-                    setCreateSuccess('');
-                  }}
-                  variant="outline"
-                  className="border-slate-600"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* System Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -323,6 +137,9 @@ export default function AdminPanel({ onBackToDashboard }: AdminPanelProps) {
               <Users className="w-5 h-5" />
               All Users ({users.length})
             </CardTitle>
+            <CardDescription className="text-slate-400">
+              Pre-configured accounts - Jon (Admin), Ben (User), Sam (User)
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -346,6 +163,9 @@ export default function AdminPanel({ onBackToDashboard }: AdminPanelProps) {
                           }>
                             {user.role}
                           </Badge>
+                          {stats.passed > 0 && (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                          )}
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -371,22 +191,46 @@ export default function AdminPanel({ onBackToDashboard }: AdminPanelProps) {
                           </div>
                         </div>
                       </div>
-
-                      {user.username !== 'Buildco_admin' && (
-                        <Button
-                          onClick={() => handleDeleteUser(user.id, user.username)}
-                          variant="outline"
-                          size="sm"
-                          className="border-red-600 text-red-400 hover:bg-red-900/20"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </Button>
-                      )}
                     </div>
                   </div>
                 );
               })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-slate-100">Recent Exam Attempts</CardTitle>
+            <CardDescription className="text-slate-400">
+              Latest 10 exam completions across all users
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {attempts.slice(0, 10).map((attempt) => (
+                <div
+                  key={attempt.id}
+                  className="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium text-slate-200">{attempt.username}</span>
+                    <Badge className={attempt.passed ? 'bg-emerald-600' : 'bg-red-600'}>
+                      {attempt.passed ? 'PASSED' : 'FAILED'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-slate-300">{attempt.percentage.toFixed(1)}%</span>
+                    <span className="text-slate-400">
+                      {new Date(attempt.completedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {attempts.length === 0 && (
+                <p className="text-center text-slate-400 py-4">No exam attempts yet</p>
+              )}
             </div>
           </CardContent>
         </Card>

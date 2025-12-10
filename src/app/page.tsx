@@ -10,7 +10,8 @@ import LoginPage from '@/components/LoginPage';
 import UserDashboard from '@/components/UserDashboard';
 import AdminPanel from '@/components/AdminPanel';
 import { EXAM_CONFIG } from '@/lib/examConfig';
-import { getCurrentSession, initializeDefaultAdmin } from '@/lib/auth';
+import { getCurrentSession, initializeDefaultAccounts } from '@/lib/authDb';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 type AppView = 'login' | 'dashboard' | 'exam' | 'admin';
 
@@ -19,9 +20,15 @@ export default function Home() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Initialize admin account on first load
+    // Initialize database accounts on first load
     const init = async () => {
-      await initializeDefaultAdmin();
+      // Check if Supabase is configured
+      if (!isSupabaseConfigured()) {
+        console.warn('⚠️ Supabase not configured. See .env.local.example for setup instructions.');
+      } else {
+        // Initialize default accounts (Jon, Ben, Sam)
+        await initializeDefaultAccounts();
+      }
 
       // Check if user is already logged in
       const session = getCurrentSession();

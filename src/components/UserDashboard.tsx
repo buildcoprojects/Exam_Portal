@@ -16,7 +16,7 @@ import {
   BarChart3,
   User
 } from 'lucide-react';
-import { getCurrentSession, logout, getUserExamAttempts, type ExamAttempt } from '@/lib/auth';
+import { getCurrentSession, logout, getUserExamAttempts, type ExamAttempt } from '@/lib/authDb';
 
 interface UserDashboardProps {
   onStartExam: () => void;
@@ -28,15 +28,21 @@ export default function UserDashboard({ onStartExam, onLogout, onViewAdmin }: Us
   const [session, setSession] = useState(getCurrentSession());
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
   const [selectedAttempt, setSelectedAttempt] = useState<ExamAttempt | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentSession = getCurrentSession();
-    setSession(currentSession);
+    const loadData = async () => {
+      const currentSession = getCurrentSession();
+      setSession(currentSession);
 
-    if (currentSession) {
-      const userAttempts = getUserExamAttempts(currentSession.userId);
-      setAttempts(userAttempts);
-    }
+      if (currentSession) {
+        const userAttempts = await getUserExamAttempts(currentSession.userId);
+        setAttempts(userAttempts);
+      }
+      setLoading(false);
+    };
+
+    loadData();
   }, []);
 
   const handleLogout = () => {
