@@ -40,7 +40,7 @@ export const EXAM_CONFIG = {
   planWeight: 25, // Each plan question worth 25 marks (total 50 marks, weighted to match MCQ)
 
   // Pool information (for practice portal only - not official exam feature)
-  questionPoolSize: 200,  // Total questions in the practice bank
+  questionPoolSize: 1000,  // Total questions in the practice bank
   description: "This practice exam matches the official BPC Commercial Builder (Medium Rise) licensing exam format: 50 MCQs + 2 plan exercises, 120 minutes total, requiring 70% pass in BOTH components."
 };
 
