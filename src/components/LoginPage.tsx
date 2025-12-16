@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { LogIn, AlertCircle, Bug } from 'lucide-react';
-import { login, debugAuth } from '@/lib/authDb';
+import { LogIn, AlertCircle } from 'lucide-react';
+import { login } from '@/lib/authDb';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -99,37 +99,6 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
               <LogIn className="w-4 h-4 mr-2" />
               {loading ? 'Logging in...' : 'Login'}
             </Button>
-
-            <div className="pt-4 border-t border-slate-600 space-y-3">
-              <div className="text-sm text-slate-400">
-                <p className="text-center mb-2 font-semibold text-slate-300">Pre-configured Accounts:</p>
-                <div className="space-y-1">
-                  <p className="text-center">
-                    Admin: <span className="text-purple-400 font-mono">Jon</span> / <span className="text-purple-400 font-mono">JonAdmin</span>
-                  </p>
-                  <p className="text-center">
-                    User: <span className="text-emerald-400 font-mono">Ben</span> / <span className="text-emerald-400 font-mono">Buildcoben</span>
-                  </p>
-                  <p className="text-center">
-                    User: <span className="text-blue-400 font-mono">Sam</span> / <span className="text-blue-400 font-mono">Buildcosam</span>
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                onClick={() => {
-                  debugAuth();
-                  alert('Check browser console (F12) for debug information');
-                }}
-                variant="outline"
-                size="sm"
-                className="w-full border-slate-600 text-slate-400 hover:text-slate-200"
-              >
-                <Bug className="w-4 h-4 mr-2" />
-                Debug Database (Check Console)
-              </Button>
-            </div>
           </form>
         </CardContent>
       </Card>
