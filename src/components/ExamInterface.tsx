@@ -324,7 +324,8 @@ export default function ExamInterface({ onExit }: ExamInterfaceProps) {
 
               <div className="flex items-center gap-2 text-slate-300">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <span>{answeredCount}/{sessionQuestions.length}</span>
+                <span className="text-sm">Answered:</span>
+                <span className="font-mono font-semibold">{answeredCount}/{sessionQuestions.length}</span>
               </div>
 
               {EXAM_CONFIG.allowFlagging && (

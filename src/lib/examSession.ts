@@ -1,5 +1,6 @@
 import type { Question, UserAnswer } from '@/types/exam';
 import { EXAM_CONFIG } from './examConfig';
+import { hasPlaceholderText } from './questions';
 
 export interface ExamSession {
   sessionId: string;
@@ -18,8 +19,12 @@ const SESSION_STORAGE_KEY = 'exam_portal_session';
  * Sample questions from the pool to create a new exam session
  */
 export function createExamSession(questionBank: Question[]): ExamSession {
-  const mcqPool = questionBank.filter(q => q.type === 'mcq');
+  // Filter out questions with obvious placeholder text
+  const allMcq = questionBank.filter(q => q.type === 'mcq');
+  const mcqPool = allMcq.filter(q => !hasPlaceholderText(q));
   const planPool = questionBank.filter(q => q.type === 'plan');
+
+  console.log(`📋 Question pools: ${mcqPool.length} MCQ available (${allMcq.length - mcqPool.length} filtered as placeholders), ${planPool.length} Plan`);
 
   // Randomly sample questions
   const selectedMcqs = shuffleArray([...mcqPool]).slice(0, EXAM_CONFIG.numMcq);

@@ -115,6 +115,31 @@ export function validateQuestionBank(questions: Question[]): {
   };
 }
 
+/**
+ * Check if a question has obvious placeholder text
+ * Filters out questions with clearly incomplete content
+ */
+export function hasPlaceholderText(question: Question): boolean {
+  if (question.type !== 'mcq') return false;
+
+  const idNum = question.id.split('-')[1];
+
+  // Check if stem contains obvious placeholder pattern
+  const stemPlaceholder = question.stem_or_prompt.includes(`Question ${idNum}:`);
+
+  // Check how many options have placeholder pattern
+  const options = [question.optionA, question.optionB, question.optionC, question.optionD].filter(Boolean);
+  const placeholderCount = options.filter(opt =>
+    opt?.includes(`Option A for ${question.id}`) ||
+    opt?.includes(`Option B for ${question.id}`) ||
+    opt?.includes(`Option C for ${question.id}`) ||
+    opt?.includes(`Option D for ${question.id}`)
+  ).length;
+
+  // Filter if stem is placeholder OR if majority of options are placeholders
+  return stemPlaceholder || placeholderCount >= 3;
+}
+
 function parseCSV(csvText: string): Question[] {
   const lines = csvText.split('\n');
   const headers = lines[0].split(',');

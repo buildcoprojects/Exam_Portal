@@ -148,7 +148,11 @@ export default function QuestionDisplay({ question, answer, onAnswer, hasAnswere
                       The correct answer is <strong>{String.fromCharCode(65 + question.correctIndex)}</strong>.
                     </span>
                   )}
-                  <div className="mt-2 text-slate-300">{question.explanation}</div>
+                  <div className="mt-2 text-slate-300">
+                    {question.explanation && question.explanation.trim().length > 0
+                      ? question.explanation
+                      : 'Explanation not available for this question.'}
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
